@@ -1,0 +1,4 @@
+.vscode
+chat/
+
+**/__pycache__/
