@@ -31,7 +31,7 @@ async def diagnose(
         try:
             image_bytes = await image.read()
             # 调用 Vision 接口解析
-            tongue_desc = vision_service.analyze_tongue(image_bytes)
+            tongue_desc = await vision_service.analyze_tongue(image_bytes)
             logger.info("视觉解析完成")
         except Exception as e:
             logger.error(f"图像读取或解析失败: {e}")
@@ -45,8 +45,8 @@ async def diagnose(
             # 先给前端吐出一句系统提示
             yield "【系统提示】已收到您的舌图和症状，正在结合典籍分析中...\n\n"
             
-            # 由于 LLM 本身是同步迭代生成器，我们使用 for 循环包裹
-            for chunk in diagnosis_service.generate_diagnosis_stream(description, tongue_desc):
+            # 由于 LLM 本身是同步迭代生成器，我们使用 for 循环包裹 (已修改为 async for)
+            async for chunk in diagnosis_service.generate_diagnosis_stream(description, tongue_desc):
                 yield chunk
                 # 让出控制权，确保 Uvicorn 有机会把当前 chunk 发送到网络缓冲
                 # 同时制造细微延迟以增强前端纯视觉的打字机流式效果
@@ -65,7 +65,7 @@ async def diagnose(
         # 如果不是流式，我们需要将生成器里的内容全接收完再返回
         # （因为我们刚才把代码全改成了 generator，这里做个简单兼容）
         full_text = ""
-        for chunk in diagnosis_service.generate_diagnosis_stream(description, tongue_desc):
+        async for chunk in diagnosis_service.generate_diagnosis_stream(description, tongue_desc):
             full_text += chunk
             
         return {

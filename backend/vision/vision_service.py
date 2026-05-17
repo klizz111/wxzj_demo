@@ -1,6 +1,7 @@
 import os
 import base64
-from openai import OpenAI
+from openai import AsyncOpenAI
+import httpx
 from dotenv import load_dotenv
 
 import logging
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 class VisionService:
     def __init__(self):
         # 读取 .env 的 BASE_URL (https://api.siliconflow.cn/v1) 和 API_KEY
-        self.client = OpenAI(
+        self.client = AsyncOpenAI(
             api_key=os.getenv("API_KEY"),
             base_url=os.getenv("BASE_URL")
         )
@@ -37,7 +38,7 @@ class VisionService:
         
         return mime_type, base64.b64encode(image_bytes).decode('utf-8')
 
-    def analyze_tongue(self, image_bytes: bytes) -> str:
+    async def analyze_tongue(self, image_bytes: bytes) -> str:
         """
         舌诊图片解析
         :param image_bytes: 舌头图片的二进制数据
@@ -56,7 +57,7 @@ class VisionService:
         try:
             logger.debug(f"正在尝试调用模型: {self.model}，图片格式: {mime_type}")
             # 采用 OpenAI 兼容格式发送多模态求情
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {

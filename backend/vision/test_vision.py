@@ -24,7 +24,7 @@ if backend_dir not in sys.path:
 
 from vision.vision_service import vision_service
 
-def run_test(image_path: str):
+async def run_test(image_path: str):
     print(f"开始测试，检查图片路径: {image_path}")
     if not os.path.exists(image_path):
         print("❌ 错误: 找不到该图片文件，请检查路径是否正确。")
@@ -35,7 +35,7 @@ def run_test(image_path: str):
         image_bytes = f.read()
 
     print("🚀 正在请求 Vision API 进行图像解析，请稍候...")
-    result = vision_service.analyze_tongue(image_bytes)
+    result = await vision_service.analyze_tongue(image_bytes)
     
     print("\n" + "="*40)
     print("✨ 服务返回的诊断结果:")
@@ -44,6 +44,8 @@ def run_test(image_path: str):
     print("="*40 + "\n")
 
 if __name__ == "__main__":
+    import asyncio
+    
     # 默认寻找当前目录下的 test_tongue.jpg 文件进行测试
     default_test_image = os.path.join(script_dir, "test","test01.png")
     
@@ -54,4 +56,4 @@ if __name__ == "__main__":
         print(f"提示: 未通过命令行指定图片路径，将默认使用: {target_image}")
         print("你也可以像这样指定路径执行测试：python test_vision.py <你的本地图片路径>\n")
         
-    run_test(target_image)
+    asyncio.run(run_test(target_image))

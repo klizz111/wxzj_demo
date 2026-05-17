@@ -72,7 +72,7 @@ class DiagnosisService:
             logger.warning("未找到 Prompt.md 模板文件，将使用内置默认模板。")
             return "你是一位中医。请根据典籍 {rag_context}，患者症状 {user_desc}，和舌象 {tongue_desc} 给出辩证。"
 
-    def generate_diagnosis_stream(self, user_desc: str, tongue_desc: str, session_id: str = "default_user"):
+    async def generate_diagnosis_stream(self, user_desc: str, tongue_desc: str, session_id: str = "default_user"):
         """
         组合 RAG 与大语言模型，通过流式 (Stream) 产生最终诊断结果。
         这是一个生成器函数，可以被 FastAPI 用于 Server-Sent Events (SSE)。
@@ -81,7 +81,8 @@ class DiagnosisService:
         
         search_query = f"症状：{user_desc}。舌象：{tongue_desc}。"
         # 同步调用 RAG 检索
-        rag_results = rag_service.search(search_query, top_k=3)
+        import asyncio
+        rag_results = await asyncio.to_thread(rag_service.search, search_query, top_k=3)
         
         if rag_results:
             rag_context_str = "\n\n".join([f"- {text}" for text in rag_results])
@@ -91,8 +92,8 @@ class DiagnosisService:
         try:
             logger.debug(f"正在调用 LLM Chain...")
             
-            # 使用包装了历史记录的 Chain 进行 stream
-            response_stream = self.chain_with_history.stream(
+            # 使用包装了历史记录的 Chain 进行 astream (异步流式推断)
+            response_stream = self.chain_with_history.astream(
                 {
                     "rag_context": rag_context_str,
                     "user_desc": user_desc,
@@ -102,7 +103,7 @@ class DiagnosisService:
             )
             
             # 持续 yield 模型生成的文字块
-            for chunk in response_stream:
+            async for chunk in response_stream:
                 if chunk:
                     yield chunk
                     
